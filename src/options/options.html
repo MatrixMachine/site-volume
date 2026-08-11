@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>Site Volume — 设置</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --fg: #1f2328;
+      --muted: #656d76;
+      --border: #d0d7de;
+      --accent: #0969da;
+      --danger: #cf222e;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --fg: #e6edf3;
+        --muted: #8b949e;
+        --border: #30363d;
+        --accent: #4493f8;
+        --danger: #f85149;
+      }
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      font-size: 14px;
+      color: var(--fg);
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 24px 16px;
+    }
+    h1 { font-size: 20px; margin-bottom: 4px; }
+    .sub { color: var(--muted); margin-bottom: 20px; }
+    .row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    .site {
+      font-weight: 600;
+      width: 220px;
+      flex-shrink: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    input[type="range"] { flex: 1; }
+    .vol { width: 48px; text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
+    .mute-toggle {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: none;
+      cursor: pointer;
+      padding: 4px 10px;
+      font-size: 13px;
+      color: var(--fg);
+    }
+    .mute-toggle.active { background: var(--danger); border-color: var(--danger); color: #fff; }
+    .delete {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: none;
+      cursor: pointer;
+      padding: 4px 10px;
+      font-size: 13px;
+      color: var(--danger);
+    }
+    .empty { color: var(--muted); padding: 16px 0; }
+    .global-row {
+      margin-top: 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .hint { color: var(--muted); font-size: 12px; margin-top: 16px; }
+  </style>
+</head>
+<body>
+  <h1>Site Volume</h1>
+  <p class="sub">每个站点的音量设置。未配置站点恒为 100%(不干预)。</p>
+
+  <div id="list"></div>
+  <p class="empty" id="empty" hidden>还没有配置任何站点。打开一个网站,在扩展弹窗里调整音量即可添加。</p>
+
+  <p class="hint">站点按主域名(eTLD+1)匹配,例如 <code>bilibili.com</code> 覆盖 <code>www</code>/<code>m</code>/<code>live</code> 子域。静音 = 音量 0。</p>
+
+  <script src="../shared/quota-log.js"></script>
+  <script src="options.js"></script>
+</body>
+</html>

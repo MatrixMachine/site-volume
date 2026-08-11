@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    :root {
+      color-scheme: light dark;
+      --fg: #1f2328;
+      --muted: #656d76;
+      --border: #d0d7de;
+      --accent: #0969da;
+      --danger: #cf222e;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --fg: #e6edf3;
+        --muted: #8b949e;
+        --border: #30363d;
+        --accent: #4493f8;
+        --danger: #f85149;
+      }
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      font-size: 13px;
+      color: var(--fg);
+      width: 300px;
+      padding: 12px;
+    }
+    h1 { font-size: 14px; margin-bottom: 8px; }
+    .site-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 0;
+    }
+    .site-name {
+      font-weight: 600;
+      min-width: 0;
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .badge {
+      font-size: 11px;
+      color: var(--muted);
+    }
+    input[type="range"] {
+      flex: 1;
+    }
+    .vol-label {
+      width: 40px;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      color: var(--muted);
+    }
+    .mute-btn {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 3px 8px;
+      cursor: pointer;
+      font-size: 12px;
+      color: var(--fg);
+    }
+    .mute-btn.active {
+      background: var(--danger);
+      border-color: var(--danger);
+      color: #fff;
+    }
+    .divider {
+      border-top: 1px solid var(--border);
+      margin: 10px 0;
+    }
+    .global-mute {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      padding: 6px 10px;
+      font-size: 13px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: none;
+      cursor: pointer;
+      color: var(--fg);
+    }
+    .global-mute.active {
+      background: var(--danger);
+      border-color: var(--danger);
+      color: #fff;
+    }
+    .hint {
+      margin-top: 8px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .empty {
+      color: var(--muted);
+      font-size: 12px;
+      padding: 6px 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>Site Volume</h1>
+
+  <div id="current-site" class="site-row">
+    <span class="site-name" id="site-name">—</span>
+    <span class="badge" id="site-badge"></span>
+  </div>
+  <div class="site-row">
+    <span>音量</span>
+    <input type="range" id="volume-slider" min="0" max="1" step="0.01" value="1">
+    <span class="vol-label" id="volume-label">100%</span>
+  </div>
+  <div class="site-row">
+    <button class="mute-btn" id="mute-btn">🔇 静音此站点</button>
+  </div>
+
+  <div class="hint">
+    静音 = 音量 0,拖动滑块即可恢复
+  </div>
+
+  <script src="../shared/quota-log.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
