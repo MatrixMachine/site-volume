@@ -39,7 +39,33 @@
     });
   }
 
-  // 暴露到全局(window),popup.js / options.js 通过 window.saveToStorage 使用
+  // ---- 最近使用记录 ----
+  // 单独的 storage key,值是 siteKey 数组,最新的在最前,长度封顶 20。
+  // 只被 popup/options 在"用户调整了站点音量/静音"时调用,不拦截正常访问。
+  const RECENTS_KEY = 'recents';
+  const RECENTS_MAX = 20;
+
+  /**
+   * 把 siteKey 推到最近使用列表最前,去重并截断;失败只记日志,不影响主流程。
+   * @param {string} siteKey 配置 key(如 'example.com')
+   * @param {string} source  调用来源('popup' / 'options'),仅用于日志
+   */
+  async function touchRecent(siteKey, source) {
+    if (!siteKey) return;
+    try {
+      const data = await chrome.storage.sync.get(RECENTS_KEY);
+      const arr = Array.isArray(data[RECENTS_KEY]) ? data[RECENTS_KEY] : [];
+      const next = [siteKey, ...arr.filter((k) => k !== siteKey)].slice(0, RECENTS_MAX);
+      await chrome.storage.sync.set({ [RECENTS_KEY]: next });
+    } catch (err) {
+      // recents 是辅助数据,失败不应阻塞主流程,也不应吓用户
+      console.warn(`[Site Volume] ${source}:更新最近使用失败(可忽略):`, err);
+    }
+  }
+
+  // 暴露到全局(window),popup.js / options.js 通过 window.saveToStorage / window.touchRecent 使用
   // (content script 的 ISOLATED world 与 popup 页面是不同上下文,这里仅服务 popup/options 页面)
   window.saveToStorage = saveToStorage;
+  window.touchRecent = touchRecent;
+  window.RECENTS_KEY = RECENTS_KEY;
 })();

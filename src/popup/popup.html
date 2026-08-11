@@ -263,9 +263,22 @@
     .manage-btn:active { transform: scale(.96); }
     .manage-btn svg { width: 12px; height: 12px; }
 
-    .site-list { max-height: 168px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
-    .site-list::-webkit-scrollbar { width: 6px; }
-    .site-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    .site-list { display: flex; flex-direction: column; gap: 4px; }
+
+    /* "还有 N 个站点 → 管理" 提示行 */
+    .list-more {
+      appearance: none;
+      background: none;
+      border: 0;
+      padding: 6px 9px;
+      color: var(--muted);
+      font-size: 11.5px;
+      text-align: left;
+      cursor: pointer;
+      border-radius: 8px;
+      transition: background .15s, color .15s;
+    }
+    .list-more:hover { background: var(--card); color: var(--accent); }
 
     @keyframes item-in {
       from { opacity: 0; transform: translateX(-6px); }
@@ -370,7 +383,7 @@
 
   <div class="section rise d2">
     <div class="list-header">
-      <span class="list-title" id="list-title">已配置站点</span>
+      <span class="list-title" id="list-title">最近使用</span>
       <button class="manage-btn" id="open-options-btn">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="3"/>

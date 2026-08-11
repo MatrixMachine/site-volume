@@ -32,6 +32,10 @@
   let currentSiteKey = null; // eTLD+1,匹配到的配置 key
   let currentHostname = null;
   let sites = {};
+  // 最近使用列表(来自 storage,新的在前);renderSiteList 只取前 5 条显示
+  let recents = [];
+  // popup 列表一次显示的条数上限
+  const LIST_LIMIT = 5;
   // 静音前的非零音量记忆(仅内存,popup 生命周期内有效):{ [siteKey]: volume }
   // 用于"恢复音量"回到静音前的值,而不是粗暴回 100%。
   const lastNonZero = {};
@@ -85,8 +89,10 @@
   }
 
   async function load() {
-    const data = await chrome.storage.sync.get(STORAGE_KEY);
+    const recentsKey = window.RECENTS_KEY || 'recents';
+    const data = await chrome.storage.sync.get([STORAGE_KEY, recentsKey]);
     sites = data[STORAGE_KEY] || {};
+    recents = Array.isArray(data[recentsKey]) ? data[recentsKey] : [];
 
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if (tab && tab.url) {
@@ -96,8 +102,8 @@
       } catch (e) { /* ignore */ }
     }
     currentSiteKey = currentHostname ? matchSite(currentHostname) : null;
-    console.log('[Site Volume] popup load: hostname=%s, siteKey=%s, sites=%o',
-      currentHostname, currentSiteKey, sites);
+    console.log('[Site Volume] popup load: hostname=%s, siteKey=%s, sites=%o, recents=%o',
+      currentHostname, currentSiteKey, sites, recents);
 
     render();
   }
@@ -128,14 +134,26 @@
     renderSiteList();
   }
 
-  // ---- 站点配置列表 ----
+  // ---- 站点配置列表(最近使用,最多 LIST_LIMIT 条) ----
   function renderSiteList() {
-    const keys = Object.keys(sites).sort();
-    el.siteListEmpty.hidden = keys.length > 0;
+    const allKeys = Object.keys(sites);
+    el.siteListEmpty.hidden = allKeys.length > 0;
 
     while (el.siteList.firstChild) el.siteList.removeChild(el.siteList.firstChild);
 
-    keys.forEach((key, i) => {
+    // 排序:recents 里的按出现顺序,不在 recents 里的按字典序排在后面
+    const rank = new Map(recents.map((k, i) => [k, i]));
+    const sorted = allKeys.slice().sort((a, b) => {
+      const ra = rank.has(a) ? rank.get(a) : Number.MAX_SAFE_INTEGER;
+      const rb = rank.has(b) ? rank.get(b) : Number.MAX_SAFE_INTEGER;
+      if (ra !== rb) return ra - rb;
+      return a.localeCompare(b);
+    });
+
+    const shown = sorted.slice(0, LIST_LIMIT);
+    const hiddenCount = sorted.length - shown.length;
+
+    shown.forEach((key, i) => {
       const vol = typeof sites[key] === 'number' ? sites[key] : 1;
       const item = document.createElement('div');
       item.className = 'list-item';
@@ -169,6 +187,20 @@
       item.appendChild(volLabel);
       el.siteList.appendChild(item);
     });
+
+    // 还有未展示的站点:给一行跳转管理页的提示
+    if (hiddenCount > 0) {
+      const more = document.createElement('button');
+      more.type = 'button';
+      more.className = 'list-more';
+      more.textContent = `还有 ${hiddenCount} 个站点 → 管理`;
+      more.addEventListener('click', () => {
+        chrome.runtime.openOptionsPage().catch((e) => {
+          console.error('[Site Volume] open options failed:', e);
+        });
+      });
+      el.siteList.appendChild(more);
+    }
   }
 
   // 更新内存 + 同步视觉;不写 storage(由 commit 负责)
@@ -188,6 +220,8 @@
     console.log('[Site Volume] commit ->', k, sites[k]);
     // 用共享配额工具写,配额超限时输出醒目错误日志
     (window.saveToStorage || ((key, val) => chrome.storage.sync.set({ [key]: val })))(STORAGE_KEY, sites, 'popup');
+    // 记一下"最近调整过"——popup 列表按此排序;失败不影响主流程
+    if (window.touchRecent) window.touchRecent(k, 'popup');
     render();
   }
 
