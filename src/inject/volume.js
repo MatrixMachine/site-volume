@@ -117,6 +117,23 @@
     el[PATCHED] = true;
   }
 
+  // ---- play() 拦截:发现 Shadow DOM 等隐藏位置的媒体元素 ----
+  // 页面播放器(尤其直播)无论元素藏在多深的 Shadow DOM,播放前必然调用 play()。
+  // 覆写 play,在调用原始 play 前先把该元素纳入音量控制。
+  function installPlayPatch() {
+    const proto = HTMLMediaElement.prototype;
+    if (proto[Symbol.for('siteVolumePlayPatched')]) return;
+    const originalPlay = proto.play;
+    if (typeof originalPlay !== 'function') return;
+
+    proto.play = function (...args) {
+      // 这个元素无论来自哪里(普通 DOM / Shadow DOM),都应用当前 factor
+      applyToElement(this);
+      return originalPlay.apply(this, args);
+    };
+    proto[Symbol.for('siteVolumePlayPatched')] = true;
+  }
+
   function startObserver() {
     const observer = new MutationObserver((mutations) => {
       for (const m of mutations) {
@@ -207,6 +224,7 @@
   // document_start 时可能没有 documentElement,MutationObserver 观察时机延后。
   function boot() {
     installMediaPatch();
+    installPlayPatch(); // 发现 Shadow DOM 等隐藏位置的媒体元素
     installAudioPatch();
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', startObserver, { once: true });
