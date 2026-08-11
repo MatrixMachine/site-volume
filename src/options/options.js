@@ -10,10 +10,24 @@
 
   const STORAGE_KEY = 'sites';
 
+  const ICON_VOL = '<svg viewBox="0 0 24 24" fill="none"><path d="M4 9.5v5h3.2L12 18.6V5.4L7.2 9.5H4z" fill="currentColor"/><path d="M15 9.2a4 4 0 0 1 0 5.6M17.6 6.8a7.4 7.4 0 0 1 0 10.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
+  const ICON_MUTE = '<svg viewBox="0 0 24 24" fill="none"><path d="M4 9.5v5h3.2L12 18.6V5.4L7.2 9.5H4z" fill="currentColor"/><path d="M15.5 9.5l5 5m0-5l-5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
+  const ICON_TRASH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14z"/></svg>';
+
   const listEl = document.getElementById('list');
   const emptyEl = document.getElementById('empty');
+  const statTotal = document.getElementById('stat-total');
+  const statAvg = document.getElementById('stat-avg');
+  const statMuted = document.getElementById('stat-muted');
 
   let sites = {};
+  // 静音前的非零音量记忆(仅内存,页面生命周期内有效):{ [siteKey]: volume }
+  // 用于"恢复"回到静音前的值,而不是粗暴回 100%。
+  const lastNonZero = {};
+
+  function save() {
+    (window.saveToStorage || ((k, val) => chrome.storage.sync.set({ [k]: val })))(STORAGE_KEY, sites, 'options');
+  }
 
   async function load() {
     const data = await chrome.storage.sync.get(STORAGE_KEY);
@@ -21,21 +35,48 @@
     render();
   }
 
+  function renderStats() {
+    const vols = Object.values(sites).filter(v => typeof v === 'number');
+    statTotal.textContent = String(vols.length);
+    statMuted.textContent = String(vols.filter(v => v === 0).length);
+    statAvg.textContent = vols.length
+      ? Math.round(vols.reduce((a, b) => a + b, 0) / vols.length * 100) + '%'
+      : '—';
+  }
+
   function render() {
-    const keys = Object.keys(sites);
+    const keys = Object.keys(sites).sort();
     emptyEl.hidden = keys.length > 0;
+    renderStats();
 
     while (listEl.firstChild) listEl.removeChild(listEl.firstChild);
 
-    for (const key of keys) {
+    keys.forEach((key, i) => {
       const vol = typeof sites[key] === 'number' ? sites[key] : 1;
-      const row = document.createElement('div');
-      row.className = 'row';
+      const isMuted = vol === 0;
 
-      const name = document.createElement('span');
+      const row = document.createElement('div');
+      row.className = 'row' + (isMuted ? ' muted-row' : '');
+      row.style.setProperty('--i', String(i));
+
+      const avatar = document.createElement('div');
+      avatar.className = 'avatar';
+      avatar.textContent = key.charAt(0).toUpperCase();
+
+      const info = document.createElement('div');
+      info.className = 'site-info';
+      const name = document.createElement('div');
       name.className = 'site';
       name.textContent = key;
       name.title = key;
+      const state = document.createElement('div');
+      state.className = 'site-state';
+      state.textContent = isMuted ? '已静音' : '生效中';
+      info.appendChild(name);
+      info.appendChild(state);
+
+      const zone = document.createElement('div');
+      zone.className = 'slider-zone';
 
       const slider = document.createElement('input');
       slider.type = 'range';
@@ -43,57 +84,78 @@
       slider.max = '1';
       slider.step = '0.01';
       slider.value = String(vol);
+      slider.style.setProperty('--fill', Math.round(vol * 100) + '%');
+      slider.setAttribute('aria-label', key + ' 音量');
 
       const volLabel = document.createElement('span');
       volLabel.className = 'vol';
       volLabel.textContent = Math.round(vol * 100) + '%';
 
+      zone.appendChild(slider);
+      zone.appendChild(volLabel);
+
       const muteBtn = document.createElement('button');
-      muteBtn.className = 'mute-toggle';
-      muteBtn.textContent = vol === 0 ? '🔊 恢复音量' : '🔇 静音';
-      muteBtn.classList.toggle('active', vol === 0);
+      muteBtn.className = 'btn mute-toggle' + (isMuted ? ' active' : '');
+      muteBtn.innerHTML = (isMuted ? ICON_VOL + '恢复' : ICON_MUTE + '静音');
 
       const del = document.createElement('button');
-      del.className = 'delete';
-      del.textContent = '删除';
+      del.className = 'btn delete';
+      del.innerHTML = ICON_TRASH;
+      del.title = '删除 ' + key;
 
       // 拖动中:只更新内存+本行 UI,不写 storage
       slider.addEventListener('input', () => {
-        const v = parseFloat(slider.value);
+        const v = Math.min(1, Math.max(0, parseFloat(slider.value)));
+        sites[key] = v;
+        const muted = v === 0;
         volLabel.textContent = Math.round(v * 100) + '%';
-        sites[key] = Math.min(1, Math.max(0, v));
-        muteBtn.textContent = sites[key] === 0 ? '🔊 恢复音量' : '🔇 静音';
-        muteBtn.classList.toggle('active', sites[key] === 0);
+        slider.style.setProperty('--fill', Math.round(v * 100) + '%');
+        row.classList.toggle('muted-row', muted);
+        state.textContent = muted ? '已静音' : '生效中';
+        muteBtn.className = 'btn mute-toggle' + (muted ? ' active' : '');
+        muteBtn.innerHTML = (muted ? ICON_VOL + '恢复' : ICON_MUTE + '静音');
       });
 
       // 松开鼠标:写一次 storage
       slider.addEventListener('change', () => {
         console.log('[Site Volume] options commit ->', key, sites[key]);
-        // 用共享配额工具写,配额超限时输出醒目错误日志
-        (window.saveToStorage || ((k, val) => chrome.storage.sync.set({ [k]: val })))(STORAGE_KEY, sites, 'options');
-        render();
+        save();
+        renderStats();
       });
 
       muteBtn.addEventListener('click', () => {
-        sites[key] = vol === 0 ? 1 : 0;
+        if (sites[key] === 0) {
+          // 恢复:回到静音前的音量(未知则 100%)
+          sites[key] = typeof lastNonZero[key] === 'number' && lastNonZero[key] > 0
+            ? lastNonZero[key]
+            : 1;
+        } else {
+          // 静音:先记住当前非零音量
+          lastNonZero[key] = sites[key];
+          sites[key] = 0;
+        }
         console.log('[Site Volume] options commit ->', key, sites[key]);
-        (window.saveToStorage || ((k, val) => chrome.storage.sync.set({ [k]: val })))(STORAGE_KEY, sites, 'options');
+        save();
         render();
       });
 
       del.addEventListener('click', () => {
-        delete sites[key];
-        (window.saveToStorage || ((k, val) => chrome.storage.sync.set({ [k]: val })))(STORAGE_KEY, sites, 'options');
-        render();
+        // 退场动画后再删除
+        row.classList.add('leaving');
+        setTimeout(() => {
+          delete sites[key];
+          save();
+          render();
+        }, 220);
       });
 
-      row.appendChild(name);
-      row.appendChild(slider);
-      row.appendChild(volLabel);
+      row.appendChild(avatar);
+      row.appendChild(info);
+      row.appendChild(zone);
       row.appendChild(muteBtn);
       row.appendChild(del);
       listEl.appendChild(row);
-    }
+    });
   }
 
   chrome.storage.onChanged.addListener((changes, area) => {

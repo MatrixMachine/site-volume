@@ -11,17 +11,30 @@
 
   const STORAGE_KEY = 'sites';
 
+  const ICON_VOL = '<svg viewBox="0 0 24 24" fill="none"><path d="M4 9.5v5h3.2L12 18.6V5.4L7.2 9.5H4z" fill="currentColor"/><path d="M15 9.2a4 4 0 0 1 0 5.6M17.6 6.8a7.4 7.4 0 0 1 0 10.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
+  const ICON_MUTE = '<svg viewBox="0 0 24 24" fill="none"><path d="M4 9.5v5h3.2L12 18.6V5.4L7.2 9.5H4z" fill="currentColor"/><path d="M15.5 9.5l5 5m0-5l-5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
+
   const el = {
+    siteAvatar: document.getElementById('site-avatar'),
     siteName: document.getElementById('site-name'),
     siteBadge: document.getElementById('site-badge'),
     slider: document.getElementById('volume-slider'),
-    volLabel: document.getElementById('volume-label'),
-    muteBtn: document.getElementById('mute-btn')
+    volNumber: document.getElementById('vol-number'),
+    waves: document.getElementById('waves'),
+    muteBtn: document.getElementById('mute-btn'),
+    siteList: document.getElementById('site-list'),
+    siteListEmpty: document.getElementById('site-list-empty'),
+    openOptionsBtn: document.getElementById('open-options-btn')
   };
+
+  const waveBars = Array.from(el.waves.querySelectorAll('span'));
 
   let currentSiteKey = null; // eTLD+1,匹配到的配置 key
   let currentHostname = null;
   let sites = {};
+  // 静音前的非零音量记忆(仅内存,popup 生命周期内有效):{ [siteKey]: volume }
+  // 用于"恢复音量"回到静音前的值,而不是粗暴回 100%。
+  const lastNonZero = {};
 
   // ---- eTLD+1 剥标签近似(与 bridge.js 保持一致) ----
   function matchSite(hostname) {
@@ -46,6 +59,31 @@
     return k && typeof sites[k] === 'number' ? sites[k] : 1;
   }
 
+  // ---- 视觉同步:大数字 / 波形条 / 滑块渐变 / 静音按钮 ----
+  function syncVisual(volume) {
+    const pct = Math.round(volume * 100);
+    const isMuted = volume === 0;
+
+    // 大数字
+    el.volNumber.innerHTML = pct + '<span class="pct">%</span>';
+    el.volNumber.classList.toggle('muted', isMuted);
+
+    // 波形条:按音量点亮不同数量,高度做波形起伏
+    const lit = Math.round(volume * waveBars.length);
+    waveBars.forEach((bar, i) => {
+      const wave = 0.45 + 0.55 * Math.abs(Math.sin((i / waveBars.length) * Math.PI));
+      bar.style.setProperty('--h', Math.round(wave * 100) + '%');
+      bar.classList.toggle('on', i < lit && !isMuted);
+    });
+
+    // 滑块轨道填充(webkit 用 CSS 变量,firefox 用 range-progress 自动)
+    el.slider.style.setProperty('--fill', pct + '%');
+
+    // 静音按钮
+    el.muteBtn.innerHTML = (isMuted ? ICON_VOL + '恢复音量' : ICON_MUTE + '静音此站点');
+    el.muteBtn.classList.toggle('active', isMuted);
+  }
+
   async function load() {
     const data = await chrome.storage.sync.get(STORAGE_KEY);
     sites = data[STORAGE_KEY] || {};
@@ -67,35 +105,79 @@
   function render() {
     const key = displayKey();
     const volume = currentVolume();
-    const isMuted = volume === 0;
 
     if (key) {
       el.siteName.textContent = key;
-      el.siteBadge.textContent = currentSiteKey ? '' : '(未配置,默认 100%)';
+      el.siteBadge.textContent = currentSiteKey ? '' : '未配置,默认 100%';
+      el.siteAvatar.textContent = key.charAt(0).toUpperCase();
+      el.siteAvatar.classList.remove('off');
     } else {
       el.siteName.textContent = '—';
       el.siteBadge.textContent = '无法获取当前站点';
+      el.siteAvatar.textContent = '·';
+      el.siteAvatar.classList.add('off');
     }
 
-    // 滑块与按钮同步来自内存 volume(单数据源)
+    // 滑块与视觉同步来自内存 volume(单数据源)
     el.slider.value = String(volume);
-    el.volLabel.textContent = Math.round(volume * 100) + '%';
+    syncVisual(volume);
 
-    el.muteBtn.textContent = isMuted ? '🔊 恢复音量' : '🔇 静音此站点';
-    el.muteBtn.classList.toggle('active', isMuted);
     el.muteBtn.disabled = !key;
     el.slider.disabled = !key;
+
+    renderSiteList();
   }
 
-  // 更新内存 + 同步按钮;不写 storage(由 commit 负责)
+  // ---- 站点配置列表 ----
+  function renderSiteList() {
+    const keys = Object.keys(sites).sort();
+    el.siteListEmpty.hidden = keys.length > 0;
+
+    while (el.siteList.firstChild) el.siteList.removeChild(el.siteList.firstChild);
+
+    keys.forEach((key, i) => {
+      const vol = typeof sites[key] === 'number' ? sites[key] : 1;
+      const item = document.createElement('div');
+      item.className = 'list-item';
+      item.style.setProperty('--i', String(i));
+
+      const avatar = document.createElement('span');
+      avatar.className = 'mini-avatar';
+      avatar.textContent = key.charAt(0).toUpperCase();
+
+      const name = document.createElement('span');
+      name.className = 'site';
+      name.textContent = key;
+      name.title = key;
+
+      const volLabel = document.createElement('span');
+      volLabel.className = 'vol' + (vol === 0 ? ' muted' : '');
+      volLabel.innerHTML = vol === 0
+        ? ICON_MUTE + '0%'
+        : Math.round(vol * 100) + '%';
+
+      // 点击列表项 → 打开对应站点的新标签(方便直接调音量)
+      item.addEventListener('click', () => {
+        const url = 'https://' + key + '/';
+        chrome.tabs.create({ url }).catch((e) => {
+          console.error('[Site Volume] open tab failed:', e);
+        });
+      });
+
+      item.appendChild(avatar);
+      item.appendChild(name);
+      item.appendChild(volLabel);
+      el.siteList.appendChild(item);
+    });
+  }
+
+  // 更新内存 + 同步视觉;不写 storage(由 commit 负责)
   function updateMemory(v) {
     const k = displayKey();
     if (!k) return;
     if (!currentSiteKey) currentSiteKey = k; // 首次操作创建配置
     sites[k] = Math.min(1, Math.max(0, v));
-    const isMuted = sites[k] === 0;
-    el.muteBtn.textContent = isMuted ? '🔊 恢复音量' : '🔇 静音此站点';
-    el.muteBtn.classList.toggle('active', isMuted);
+    syncVisual(sites[k]);
     return k;
   }
 
@@ -110,11 +192,9 @@
   }
 
   // ---- 事件 ----
-  // 拖动中:只更新内存+标签+按钮,不写 storage
+  // 拖动中:只更新内存+视觉,不写 storage
   el.slider.addEventListener('input', () => {
-    const v = parseFloat(el.slider.value);
-    el.volLabel.textContent = Math.round(v * 100) + '%';
-    updateMemory(v);
+    updateMemory(parseFloat(el.slider.value));
   });
 
   // 松开鼠标:写一次 storage
@@ -123,9 +203,27 @@
   });
 
   el.muteBtn.addEventListener('click', () => {
-    const next = currentVolume() === 0 ? 1 : 0;
+    const k = displayKey();
+    if (!k) return;
+    const cur = currentVolume();
+    let next;
+    if (cur === 0) {
+      // 恢复:回到静音前的音量(未知则 100%)
+      next = typeof lastNonZero[k] === 'number' && lastNonZero[k] > 0 ? lastNonZero[k] : 1;
+    } else {
+      // 静音:先记住当前非零音量
+      lastNonZero[k] = cur;
+      next = 0;
+    }
     updateMemory(next);
     commit();
+  });
+
+  // 打开完整管理页(options)
+  el.openOptionsBtn.addEventListener('click', () => {
+    chrome.runtime.openOptionsPage().catch((e) => {
+      console.error('[Site Volume] open options failed:', e);
+    });
   });
 
   // storage 变更(其他窗口/options 修改)时刷新

@@ -191,10 +191,19 @@
   // ---- 应用新 factor ----
   function applyFactor(f) {
     siteFactor = f;
-    // 更新所有已代理元素的实际音量
+    // 更新所有媒体元素:
+    // - 已有源音量记录的:直接应用 factor
+    // - 没有记录的(从未触发 setter/play 拦截,如 115 播放器):读当前真实音量
+    //   记为源音量后再应用——保证拖动滑块时任何元素都会被纳入控制
     try {
       document.querySelectorAll('audio, video').forEach((el) => {
-        const src = getSourceVolume(el);
+        let src = getSourceVolume(el);
+        if (typeof src !== 'number') {
+          // 此刻 prototype 已被覆写;getter 返回 stored ?? originalGetter
+          // 若 getter 返回原始值,说明该元素从未被我们接管,把当前音量记为源音量
+          src = el.volume;
+          setSourceVolume(el, src);
+        }
         if (typeof src === 'number' && _originalSetter) {
           _originalSetter.call(el, effectiveVolume(src));
         }

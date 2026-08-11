@@ -5,124 +5,385 @@
   <style>
     :root {
       color-scheme: light dark;
-      --fg: #1f2328;
-      --muted: #656d76;
-      --border: #d0d7de;
-      --accent: #0969da;
-      --danger: #cf222e;
+      --bg: #f6f7fb;
+      --card: #ffffff;
+      --fg: #1c1e26;
+      --muted: #6b7280;
+      --border: #e5e7ef;
+      --accent: #7c5cf0;
+      --accent-grad: linear-gradient(90deg, #8b5cf6, #4f46e5);
+      --track: #e9eaf3;
+      --danger: #e5484d;
+      --shadow: 0 1px 2px rgba(20, 20, 50, .04), 0 4px 16px rgba(20, 20, 50, .06);
+      --ring: 0 0 0 3px rgba(124, 92, 240, .22);
     }
     @media (prefers-color-scheme: dark) {
       :root {
-        --fg: #e6edf3;
-        --muted: #8b949e;
-        --border: #30363d;
-        --accent: #4493f8;
-        --danger: #f85149;
+        --bg: #101118;
+        --card: #1a1c26;
+        --fg: #e8eaf2;
+        --muted: #9aa0ae;
+        --border: #2a2d3a;
+        --accent: #9d7bff;
+        --track: #2a2d3a;
+        --danger: #f2636b;
+        --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 6px 20px rgba(0, 0, 0, .35);
+        --ring: 0 0 0 3px rgba(157, 123, 255, .28);
       }
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { background: var(--bg); }
     body {
-      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      font-family: system-ui, -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
       font-size: 13px;
       color: var(--fg);
-      width: 300px;
-      padding: 12px;
+      width: 320px;
+      padding: 14px;
+      background: var(--bg);
+      -webkit-font-smoothing: antialiased;
     }
-    h1 { font-size: 14px; margin-bottom: 8px; }
-    .site-row {
+
+    /* ---------- entrance animation ---------- */
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .rise { animation: rise .32s cubic-bezier(.2, .8, .25, 1) both; }
+    .rise.d1 { animation-delay: .04s; }
+    .rise.d2 { animation-delay: .10s; }
+    .rise.d3 { animation-delay: .16s; }
+
+    /* ---------- header ---------- */
+    .head {
       display: flex;
       align-items: center;
-      gap: 8px;
-      padding: 6px 0;
+      gap: 10px;
+      margin-bottom: 12px;
     }
+    .logo {
+      width: 28px; height: 28px;
+      border-radius: 8px;
+      background: var(--accent-grad);
+      display: grid; place-items: center;
+      flex-shrink: 0;
+      box-shadow: 0 2px 8px rgba(124, 92, 240, .35);
+    }
+    .logo svg { width: 17px; height: 17px; display: block; }
+    h1 { font-size: 14px; font-weight: 700; letter-spacing: .2px; }
+
+    /* ---------- current site card ---------- */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      box-shadow: var(--shadow);
+      padding: 14px;
+    }
+    .site-line {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .avatar {
+      width: 34px; height: 34px;
+      border-radius: 10px;
+      background: var(--accent-grad);
+      color: #fff;
+      font-weight: 700;
+      font-size: 15px;
+      display: grid; place-items: center;
+      flex-shrink: 0;
+      user-select: none;
+    }
+    .avatar.off { background: var(--track); color: var(--muted); }
+    .site-meta { min-width: 0; flex: 1; }
     .site-name {
-      font-weight: 600;
-      min-width: 0;
-      flex: 1;
+      font-weight: 650;
+      font-size: 13.5px;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
-    .badge {
+    .site-badge {
       font-size: 11px;
       color: var(--muted);
+      margin-top: 1px;
     }
-    input[type="range"] {
-      flex: 1;
+
+    /* ---------- big volume readout + waves ---------- */
+    .vol-display {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      margin-bottom: 10px;
     }
-    .vol-label {
-      width: 40px;
-      text-align: right;
+    .vol-number {
+      font-size: 30px;
+      font-weight: 750;
       font-variant-numeric: tabular-nums;
-      color: var(--muted);
+      letter-spacing: -0.5px;
+      line-height: 1;
+      transition: color .25s;
     }
-    .mute-btn {
-      background: none;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 3px 8px;
+    .vol-number .pct { font-size: 15px; font-weight: 600; color: var(--muted); margin-left: 2px; }
+    .vol-number.muted { color: var(--danger); }
+
+    .waves {
+      display: flex;
+      align-items: flex-end;
+      gap: 3px;
+      height: 22px;
+      padding-bottom: 2px;
+    }
+    .waves span {
+      width: 4px;
+      border-radius: 2px;
+      background: var(--accent-grad);
+      height: var(--h, 20%);
+      opacity: .25;
+      transition: height .18s ease, opacity .18s ease;
+    }
+    .waves span.on { opacity: 1; }
+
+    /* ---------- slider ---------- */
+    .slider-wrap { position: relative; padding: 4px 0 2px; }
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 22px;
+      background: transparent;
       cursor: pointer;
-      font-size: 12px;
-      color: var(--fg);
+      display: block;
     }
-    .mute-btn.active {
-      background: var(--danger);
-      border-color: var(--danger);
+    input[type="range"]:focus { outline: none; }
+    input[type="range"]::-webkit-slider-runnable-track {
+      height: 8px;
+      border-radius: 99px;
+      background:
+        var(--accent-grad) 0 / var(--fill, 100%) 100% no-repeat,
+        var(--track);
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 20px; height: 20px;
+      margin-top: -6px;
+      border-radius: 50%;
+      background: #fff;
+      border: 2px solid var(--accent);
+      box-shadow: 0 1px 4px rgba(20, 20, 50, .25);
+      transition: transform .15s cubic-bezier(.2, .8, .25, 1), box-shadow .15s;
+    }
+    input[type="range"]:hover::-webkit-slider-thumb { transform: scale(1.12); }
+    input[type="range"]:active::-webkit-slider-thumb {
+      transform: scale(1.22);
+      box-shadow: var(--ring), 0 1px 4px rgba(20, 20, 50, .25);
+    }
+    input[type="range"]::-moz-range-track {
+      height: 8px; border-radius: 99px; background: var(--track);
+    }
+    input[type="range"]::-moz-range-progress {
+      height: 8px; border-radius: 99px; background: var(--accent-grad);
+    }
+    input[type="range"]::-moz-range-thumb {
+      width: 16px; height: 16px; border-radius: 50%;
+      background: #fff; border: 2px solid var(--accent);
+      box-shadow: 0 1px 4px rgba(20, 20, 50, .25);
+      transition: transform .15s;
+    }
+    input[type="range"]:hover::-moz-range-thumb { transform: scale(1.12); }
+    input[type="range"]:disabled { opacity: .45; cursor: not-allowed; }
+
+    /* ---------- mute button ---------- */
+    .mute-btn {
+      margin-top: 12px;
+      width: 100%;
+      border: none;
+      border-radius: 10px;
+      padding: 9px 12px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
       color: #fff;
+      background: var(--accent-grad);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      box-shadow: 0 2px 10px rgba(124, 92, 240, .30);
+      transition: transform .12s cubic-bezier(.2, .8, .25, 1), box-shadow .2s, filter .2s;
     }
-    .divider {
-      border-top: 1px solid var(--border);
-      margin: 10px 0;
+    .mute-btn:hover { filter: brightness(1.07); box-shadow: 0 4px 14px rgba(124, 92, 240, .38); }
+    .mute-btn:active { transform: scale(.97); }
+    .mute-btn:focus-visible { outline: none; box-shadow: var(--ring); }
+    .mute-btn.active {
+      background: var(--card);
+      color: var(--danger);
+      border: 1.5px solid var(--danger);
+      box-shadow: none;
+      animation: pulse 2s ease-in-out infinite;
     }
-    .global-mute {
+    .mute-btn:disabled { opacity: .45; cursor: not-allowed; transform: none; animation: none; }
+    .mute-btn svg { width: 15px; height: 15px; }
+
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(229, 72, 77, .35); }
+      50% { box-shadow: 0 0 0 5px rgba(229, 72, 77, 0); }
+    }
+
+    /* ---------- configured sites list ---------- */
+    .section { margin-top: 14px; }
+    .list-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      width: 100%;
-      padding: 6px 10px;
-      font-size: 13px;
+      margin-bottom: 8px;
+    }
+    .list-title {
+      font-size: 11.5px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .6px;
+    }
+    .manage-btn {
+      background: none;
       border: 1px solid var(--border);
       border-radius: 8px;
-      background: none;
+      padding: 3px 10px;
       cursor: pointer;
+      font-size: 11.5px;
+      font-weight: 600;
       color: var(--fg);
+      display: flex; align-items: center; gap: 4px;
+      transition: background .15s, border-color .15s, color .15s, transform .1s;
     }
-    .global-mute.active {
-      background: var(--danger);
-      border-color: var(--danger);
+    .manage-btn:hover { background: var(--card); border-color: var(--accent); color: var(--accent); }
+    .manage-btn:active { transform: scale(.96); }
+    .manage-btn svg { width: 12px; height: 12px; }
+
+    .site-list { max-height: 168px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
+    .site-list::-webkit-scrollbar { width: 6px; }
+    .site-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    @keyframes item-in {
+      from { opacity: 0; transform: translateX(-6px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+    .list-item {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 7px 9px;
+      border-radius: 10px;
+      cursor: pointer;
+      border: 1px solid transparent;
+      animation: item-in .25s cubic-bezier(.2, .8, .25, 1) both;
+      animation-delay: calc(var(--i) * 35ms);
+      transition: background .15s, border-color .15s, transform .15s;
+    }
+    .list-item:hover {
+      background: var(--card);
+      border-color: var(--border);
+      transform: translateX(2px);
+    }
+    .mini-avatar {
+      width: 22px; height: 22px;
+      border-radius: 7px;
+      background: var(--accent-grad);
       color: #fff;
-    }
-    .hint {
-      margin-top: 8px;
       font-size: 11px;
-      color: var(--muted);
+      font-weight: 700;
+      display: grid; place-items: center;
+      flex-shrink: 0;
+      user-select: none;
     }
+    .list-item .site {
+      font-weight: 550;
+      font-size: 12.5px;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex: 1;
+    }
+    .list-item .vol {
+      color: var(--muted);
+      font-size: 12px;
+      font-variant-numeric: tabular-nums;
+      display: flex; align-items: center; gap: 4px;
+    }
+    .list-item .vol.muted { color: var(--danger); font-weight: 650; }
+    .list-item .vol svg { width: 12px; height: 12px; }
+
     .empty {
       color: var(--muted);
       font-size: 12px;
-      padding: 6px 0;
+      padding: 8px 2px;
+      text-align: center;
+      line-height: 1.6;
+    }
+
+    .hint {
+      margin-top: 12px;
+      font-size: 11px;
+      color: var(--muted);
+      text-align: center;
     }
   </style>
 </head>
 <body>
-  <h1>Site Volume</h1>
-
-  <div id="current-site" class="site-row">
-    <span class="site-name" id="site-name">—</span>
-    <span class="badge" id="site-badge"></span>
-  </div>
-  <div class="site-row">
-    <span>音量</span>
-    <input type="range" id="volume-slider" min="0" max="1" step="0.01" value="1">
-    <span class="vol-label" id="volume-label">100%</span>
-  </div>
-  <div class="site-row">
-    <button class="mute-btn" id="mute-btn">🔇 静音此站点</button>
+  <div class="head rise">
+    <div class="logo" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none">
+        <path d="M4 9.5v5h3.2L12 18.6V5.4L7.2 9.5H4z" fill="#fff"/>
+        <path d="M15 9.2a4 4 0 0 1 0 5.6M17.6 6.8a7.4 7.4 0 0 1 0 10.4" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <h1>Site Volume</h1>
   </div>
 
-  <div class="hint">
-    静音 = 音量 0,拖动滑块即可恢复
+  <div class="card rise d1">
+    <div class="site-line">
+      <div class="avatar off" id="site-avatar">·</div>
+      <div class="site-meta">
+        <div class="site-name" id="site-name">—</div>
+        <div class="site-badge" id="site-badge"></div>
+      </div>
+    </div>
+
+    <div class="vol-display">
+      <div class="vol-number" id="vol-number">100<span class="pct">%</span></div>
+      <div class="waves" id="waves" aria-hidden="true">
+        <span></span><span></span><span></span><span></span><span></span>
+        <span></span><span></span><span></span><span></span><span></span>
+      </div>
+    </div>
+
+    <div class="slider-wrap">
+      <input type="range" id="volume-slider" min="0" max="1" step="0.01" value="1" aria-label="站点音量">
+    </div>
+
+    <button class="mute-btn" id="mute-btn"></button>
   </div>
+
+  <div class="section rise d2">
+    <div class="list-header">
+      <span class="list-title" id="list-title">已配置站点</span>
+      <button class="manage-btn" id="open-options-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+        管理
+      </button>
+    </div>
+    <div id="site-list" class="site-list"></div>
+    <p class="empty" id="site-list-empty" hidden>还没有配置站点<br>调整音量后会自动添加</p>
+  </div>
+
+  <div class="hint rise d3">静音 = 音量 0,拖动滑块即可恢复</div>
 
   <script src="../shared/quota-log.js"></script>
   <script src="popup.js"></script>

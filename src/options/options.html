@@ -6,86 +6,286 @@
   <style>
     :root {
       color-scheme: light dark;
-      --fg: #1f2328;
-      --muted: #656d76;
-      --border: #d0d7de;
-      --accent: #0969da;
-      --danger: #cf222e;
+      --bg: #f6f7fb;
+      --card: #ffffff;
+      --fg: #1c1e26;
+      --muted: #6b7280;
+      --border: #e5e7ef;
+      --accent: #7c5cf0;
+      --accent-grad: linear-gradient(90deg, #8b5cf6, #4f46e5);
+      --track: #e9eaf3;
+      --danger: #e5484d;
+      --shadow: 0 1px 2px rgba(20, 20, 50, .04), 0 4px 16px rgba(20, 20, 50, .06);
+      --ring: 0 0 0 3px rgba(124, 92, 240, .22);
     }
     @media (prefers-color-scheme: dark) {
       :root {
-        --fg: #e6edf3;
-        --muted: #8b949e;
-        --border: #30363d;
-        --accent: #4493f8;
-        --danger: #f85149;
+        --bg: #101118;
+        --card: #1a1c26;
+        --fg: #e8eaf2;
+        --muted: #9aa0ae;
+        --border: #2a2d3a;
+        --accent: #9d7bff;
+        --track: #2a2d3a;
+        --danger: #f2636b;
+        --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 6px 20px rgba(0, 0, 0, .35);
+        --ring: 0 0 0 3px rgba(157, 123, 255, .28);
       }
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      font-family: system-ui, -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
       font-size: 14px;
       color: var(--fg);
-      max-width: 720px;
-      margin: 0 auto;
-      padding: 24px 16px;
+      background: var(--bg);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
     }
-    h1 { font-size: 20px; margin-bottom: 4px; }
-    .sub { color: var(--muted); margin-bottom: 20px; }
+    .wrap { max-width: 680px; margin: 0 auto; padding: 32px 20px 48px; }
+
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .rise { animation: rise .35s cubic-bezier(.2, .8, .25, 1) both; }
+    .rise.d1 { animation-delay: .06s; }
+    .rise.d2 { animation-delay: .12s; }
+
+    /* ---------- header ---------- */
+    .head { display: flex; align-items: center; gap: 14px; margin-bottom: 6px; }
+    .logo {
+      width: 44px; height: 44px;
+      border-radius: 13px;
+      background: var(--accent-grad);
+      display: grid; place-items: center;
+      flex-shrink: 0;
+      box-shadow: 0 4px 14px rgba(124, 92, 240, .35);
+    }
+    .logo svg { width: 26px; height: 26px; }
+    h1 { font-size: 22px; font-weight: 750; letter-spacing: .2px; }
+    .sub { color: var(--muted); margin: 4px 0 24px 58px; font-size: 13px; }
+
+    /* ---------- stat cards ---------- */
+    .stats { display: flex; gap: 12px; margin-bottom: 24px; }
+    .stat {
+      flex: 1;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      box-shadow: var(--shadow);
+      padding: 14px 16px;
+      transition: transform .2s cubic-bezier(.2, .8, .25, 1), box-shadow .2s;
+    }
+    .stat:hover { transform: translateY(-2px); }
+    .stat .num {
+      font-size: 24px;
+      font-weight: 750;
+      font-variant-numeric: tabular-nums;
+      line-height: 1.1;
+    }
+    .stat .num.accent {
+      background: var(--accent-grad);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .stat .num.danger { color: var(--danger); }
+    .stat .lbl { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+    /* ---------- site rows ---------- */
+    #list { display: flex; flex-direction: column; gap: 10px; }
+
+    @keyframes row-in {
+      from { opacity: 0; transform: translateY(8px) scale(.99); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
     .row {
       display: flex;
       align-items: center;
-      gap: 12px;
-      padding: 10px 8px;
-      border-bottom: 1px solid var(--border);
+      gap: 14px;
+      padding: 14px 16px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      box-shadow: var(--shadow);
+      animation: row-in .3s cubic-bezier(.2, .8, .25, 1) both;
+      animation-delay: calc(var(--i) * 45ms);
+      transition: border-color .2s, transform .2s, opacity .25s;
     }
-    .site {
-      font-weight: 600;
-      width: 220px;
+    .row:hover { border-color: var(--accent); }
+    .row.leaving { opacity: 0; transform: translateX(16px) scale(.98); }
+
+    .avatar {
+      width: 38px; height: 38px;
+      border-radius: 11px;
+      background: var(--accent-grad);
+      color: #fff;
+      font-weight: 700;
+      font-size: 17px;
+      display: grid; place-items: center;
       flex-shrink: 0;
+      user-select: none;
+    }
+    .row.muted-row .avatar { background: var(--track); color: var(--muted); }
+
+    .site-info { width: 170px; flex-shrink: 0; min-width: 0; }
+    .site {
+      font-weight: 650;
+      font-size: 14px;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
     }
-    input[type="range"] { flex: 1; }
-    .vol { width: 48px; text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
-    .mute-toggle {
+    .site-state { font-size: 11.5px; color: var(--muted); margin-top: 1px; }
+    .row.muted-row .site-state { color: var(--danger); }
+
+    /* ---------- slider ---------- */
+    .slider-zone { flex: 1; display: flex; align-items: center; gap: 12px; min-width: 0; }
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      flex: 1;
+      height: 22px;
+      background: transparent;
+      cursor: pointer;
+      min-width: 80px;
+    }
+    input[type="range"]:focus { outline: none; }
+    input[type="range"]::-webkit-slider-runnable-track {
+      height: 8px;
+      border-radius: 99px;
+      background:
+        var(--accent-grad) 0 / var(--fill, 100%) 100% no-repeat,
+        var(--track);
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px; height: 18px;
+      margin-top: -5px;
+      border-radius: 50%;
+      background: #fff;
+      border: 2px solid var(--accent);
+      box-shadow: 0 1px 4px rgba(20, 20, 50, .25);
+      transition: transform .15s cubic-bezier(.2, .8, .25, 1), box-shadow .15s;
+    }
+    input[type="range"]:hover::-webkit-slider-thumb { transform: scale(1.12); }
+    input[type="range"]:active::-webkit-slider-thumb {
+      transform: scale(1.2);
+      box-shadow: var(--ring), 0 1px 4px rgba(20, 20, 50, .25);
+    }
+    input[type="range"]::-moz-range-track {
+      height: 8px; border-radius: 99px; background: var(--track);
+    }
+    input[type="range"]::-moz-range-progress {
+      height: 8px; border-radius: 99px; background: var(--accent-grad);
+    }
+    input[type="range"]::-moz-range-thumb {
+      width: 14px; height: 14px; border-radius: 50%;
+      background: #fff; border: 2px solid var(--accent);
+      box-shadow: 0 1px 4px rgba(20, 20, 50, .25);
+      transition: transform .15s;
+    }
+    input[type="range"]:hover::-moz-range-thumb { transform: scale(1.12); }
+
+    .vol {
+      width: 52px;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      font-weight: 650;
+      font-size: 13.5px;
+      flex-shrink: 0;
+      transition: color .2s;
+    }
+    .row.muted-row .vol { color: var(--danger); }
+
+    /* ---------- buttons ---------- */
+    .btn {
       border: 1px solid var(--border);
-      border-radius: 6px;
+      border-radius: 9px;
       background: none;
       cursor: pointer;
-      padding: 4px 10px;
-      font-size: 13px;
+      padding: 6px 10px;
+      font-size: 12.5px;
+      font-weight: 600;
       color: var(--fg);
+      display: flex; align-items: center; gap: 5px;
+      flex-shrink: 0;
+      transition: all .15s;
     }
-    .mute-toggle.active { background: var(--danger); border-color: var(--danger); color: #fff; }
-    .delete {
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      background: none;
-      cursor: pointer;
-      padding: 4px 10px;
-      font-size: 13px;
-      color: var(--danger);
+    .btn svg { width: 13px; height: 13px; }
+    .btn:active { transform: scale(.95); }
+    .mute-toggle:hover { border-color: var(--accent); color: var(--accent); }
+    .mute-toggle.active {
+      background: var(--danger);
+      border-color: var(--danger);
+      color: #fff;
     }
-    .empty { color: var(--muted); padding: 16px 0; }
-    .global-row {
+    .delete { color: var(--muted); }
+    .delete:hover { background: var(--danger); border-color: var(--danger); color: #fff; }
+
+    /* ---------- empty & hint ---------- */
+    .empty {
+      color: var(--muted);
+      text-align: center;
+      padding: 48px 0;
+      line-height: 1.8;
+    }
+    .empty svg { width: 40px; height: 40px; opacity: .35; margin-bottom: 8px; }
+    .hint {
+      color: var(--muted);
+      font-size: 12px;
       margin-top: 24px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
+      text-align: center;
+      line-height: 1.8;
     }
-    .hint { color: var(--muted); font-size: 12px; margin-top: 16px; }
+    .hint code {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 1px 6px;
+      font-size: 11.5px;
+    }
   </style>
 </head>
 <body>
-  <h1>Site Volume</h1>
-  <p class="sub">每个站点的音量设置。未配置站点恒为 100%(不干预)。</p>
+  <div class="wrap">
+    <div class="head rise">
+      <div class="logo" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none">
+          <path d="M4 9.5v5h3.2L12 18.6V5.4L7.2 9.5H4z" fill="#fff"/>
+          <path d="M15 9.2a4 4 0 0 1 0 5.6M17.6 6.8a7.4 7.4 0 0 1 0 10.4" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <h1>Site Volume</h1>
+    </div>
+    <p class="sub rise">每个站点的音量设置。未配置站点恒为 100%(不干预)。</p>
 
-  <div id="list"></div>
-  <p class="empty" id="empty" hidden>还没有配置任何站点。打开一个网站,在扩展弹窗里调整音量即可添加。</p>
+    <div class="stats rise d1">
+      <div class="stat">
+        <div class="num accent" id="stat-total">0</div>
+        <div class="lbl">已配置站点</div>
+      </div>
+      <div class="stat">
+        <div class="num" id="stat-avg">—</div>
+        <div class="lbl">平均音量</div>
+      </div>
+      <div class="stat">
+        <div class="num danger" id="stat-muted">0</div>
+        <div class="lbl">已静音站点</div>
+      </div>
+    </div>
 
-  <p class="hint">站点按主域名(eTLD+1)匹配,例如 <code>bilibili.com</code> 覆盖 <code>www</code>/<code>m</code>/<code>live</code> 子域。静音 = 音量 0。</p>
+    <div id="list" class="rise d2"></div>
+    <div class="empty rise d2" id="empty" hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+        <path d="M4 9.5v5h3.2L12 18.6V5.4L7.2 9.5H4z"/>
+        <path d="M15 9.2a4 4 0 0 1 0 5.6M17.6 6.8a7.4 7.4 0 0 1 0 10.4"/>
+      </svg>
+      <br>还没有配置任何站点<br>打开一个网站,在扩展弹窗里调整音量即可添加
+    </div>
+
+    <p class="hint rise d2">站点按主域名(eTLD+1)匹配,例如 <code>bilibili.com</code> 覆盖 <code>www</code> / <code>m</code> / <code>live</code> 子域<br>静音 = 音量 0</p>
+  </div>
 
   <script src="../shared/quota-log.js"></script>
   <script src="options.js"></script>
