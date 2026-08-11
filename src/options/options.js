@@ -19,6 +19,10 @@
   const statTotal = document.getElementById('stat-total');
   const statAvg = document.getElementById('stat-avg');
   const statMuted = document.getElementById('stat-muted');
+  const importBtn = document.getElementById('import-btn');
+  const exportBtn = document.getElementById('export-btn');
+  const importFile = document.getElementById('import-file');
+  const toolbarMsg = document.getElementById('toolbar-msg');
 
   let sites = {};
   // 静音前的非零音量记忆(仅内存,页面生命周期内有效):{ [siteKey]: volume }
@@ -120,6 +124,7 @@
       slider.addEventListener('change', () => {
         console.log('[Site Volume] options commit ->', key, sites[key]);
         save();
+        if (window.touchRecent) window.touchRecent(key, 'options');
         renderStats();
       });
 
@@ -136,6 +141,7 @@
         }
         console.log('[Site Volume] options commit ->', key, sites[key]);
         save();
+        if (window.touchRecent) window.touchRecent(key, 'options');
         render();
       });
 
@@ -157,6 +163,114 @@
       listEl.appendChild(row);
     });
   }
+
+  // ---- 导入 / 导出 ----
+  let msgTimer = null;
+  function showMsg(text, kind) {
+    toolbarMsg.textContent = text;
+    toolbarMsg.className = 'toolbar-msg' + (kind ? ' ' + kind : '');
+    if (msgTimer) clearTimeout(msgTimer);
+    // 5s 后自动清掉,避免长期占用视觉焦点
+    msgTimer = setTimeout(() => {
+      toolbarMsg.textContent = '';
+      toolbarMsg.className = 'toolbar-msg';
+    }, 5000);
+  }
+
+  function exportConfig() {
+    const payload = {
+      app: 'site-volume',
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      sites
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const stamp = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    a.href = url;
+    a.download = `site-volume-${stamp}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    // 释放 blob URL
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    const count = Object.keys(sites).length;
+    showMsg(`已导出 ${count} 个站点`, 'ok');
+  }
+
+  // 把任意形态的 JSON 归一化成 { siteKey: volume(0..1) }
+  // 容忍三种输入:{ sites:{...} }(本扩展导出) / 直接的 { siteKey: number } / 旧模型 { siteKey: {volume, muted} }
+  function normalizeImported(json) {
+    let raw = null;
+    if (json && typeof json === 'object' && !Array.isArray(json)) {
+      if (json.sites && typeof json.sites === 'object' && !Array.isArray(json.sites)) {
+        raw = json.sites;
+      } else {
+        raw = json;
+      }
+    }
+    if (!raw) return null;
+    const out = {};
+    for (const [key, val] of Object.entries(raw)) {
+      if (typeof key !== 'string' || !key) continue;
+      let v = null;
+      if (typeof val === 'number') {
+        v = val;
+      } else if (val && typeof val === 'object') {
+        // 旧模型 { volume, muted }
+        const vol = typeof val.volume === 'number' ? val.volume : 1;
+        v = val.muted ? 0 : vol;
+      }
+      if (typeof v !== 'number' || !isFinite(v)) continue;
+      out[key] = Math.min(1, Math.max(0, v));
+    }
+    return out;
+  }
+
+  async function importConfig(file) {
+    let json;
+    try {
+      const text = await file.text();
+      json = JSON.parse(text);
+    } catch (e) {
+      showMsg('文件不是有效的 JSON', 'err');
+      return;
+    }
+    const imported = normalizeImported(json);
+    if (!imported) {
+      showMsg('文件结构不识别:需要 { sites: { siteKey: volume } } 或直接 { siteKey: volume }', 'err');
+      return;
+    }
+    const importedKeys = Object.keys(imported);
+    if (importedKeys.length === 0) {
+      showMsg('文件里没有可用的站点配置', 'err');
+      return;
+    }
+    // 合并:导入的覆盖冲突
+    let added = 0, overridden = 0;
+    for (const k of importedKeys) {
+      if (Object.prototype.hasOwnProperty.call(sites, k)) overridden++;
+      else added++;
+      sites[k] = imported[k];
+    }
+    save();
+    render();
+    const parts = [];
+    parts.push(`导入 ${importedKeys.length} 个`);
+    if (added > 0) parts.push(`新增 ${added}`);
+    if (overridden > 0) parts.push(`覆盖 ${overridden}`);
+    showMsg(parts.join(' · '), 'ok');
+  }
+
+  importBtn.addEventListener('click', () => importFile.click());
+  importFile.addEventListener('change', () => {
+    const f = importFile.files && importFile.files[0];
+    if (f) importConfig(f);
+    // 允许连续选同一个文件
+    importFile.value = '';
+  });
+  exportBtn.addEventListener('click', exportConfig);
 
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area !== 'sync') return;

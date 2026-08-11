@@ -223,6 +223,24 @@
     .delete { color: var(--muted); }
     .delete:hover { background: var(--danger); border-color: var(--danger); color: #fff; }
 
+    /* ---------- toolbar(导入/导出) ---------- */
+    .toolbar {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+      margin-bottom: 10px;
+    }
+    .toolbar .btn:hover { border-color: var(--accent); color: var(--accent); }
+    /* 导入结果的轻提示(成功/失败都走这里) */
+    .toolbar-msg {
+      align-self: center;
+      font-size: 12px;
+      color: var(--muted);
+      margin-right: auto; /* 把按钮推到右边 */
+    }
+    .toolbar-msg.ok { color: var(--accent); }
+    .toolbar-msg.err { color: var(--danger); }
+
     /* ---------- empty & hint ---------- */
     .empty {
       color: var(--muted);
@@ -273,6 +291,27 @@
         <div class="num danger" id="stat-muted">0</div>
         <div class="lbl">已静音站点</div>
       </div>
+    </div>
+
+    <div class="toolbar rise d2">
+      <span class="toolbar-msg" id="toolbar-msg"></span>
+      <button class="btn" id="import-btn" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        导入
+      </button>
+      <button class="btn" id="export-btn" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/>
+          <line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+        导出
+      </button>
+      <input type="file" id="import-file" accept="application/json,.json" hidden>
     </div>
 
     <div id="list" class="rise d2"></div>
