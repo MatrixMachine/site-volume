@@ -158,6 +158,7 @@
       const item = document.createElement('div');
       item.className = 'list-item';
       item.style.setProperty('--i', String(i));
+      item.dataset.site = key; // 供 commit 后原地更新该行音量,避免整列表重建
 
       const avatar = document.createElement('span');
       avatar.className = 'mini-avatar';
@@ -203,12 +204,25 @@
     }
   }
 
+  // 只更新列表中当前站点的音量标签,不重建整个列表。
+  // 调音量后若整列表重建,会让"最近站点"区域闪一下;该站点已在列表里时原地更新即可。
+  function updateCurrentSiteInList(k) {
+    const item = Array.from(el.siteList.children)
+      .find((node) => node.dataset && node.dataset.site === k);
+    if (!item) return;
+    const vol = typeof sites[k] === 'number' ? sites[k] : 1;
+    const volLabel = item.querySelector('.vol');
+    volLabel.className = 'vol' + (vol === 0 ? ' muted' : '');
+    volLabel.innerHTML = vol === 0 ? ICON_MUTE + '0%' : Math.round(vol * 100) + '%';
+  }
+
   // 更新内存 + 同步视觉;不写 storage(由 commit 负责)
   function updateMemory(v) {
     const k = displayKey();
     if (!k) return;
     if (!currentSiteKey) currentSiteKey = k; // 首次操作创建配置
     sites[k] = Math.min(1, Math.max(0, v));
+    el.slider.value = String(sites[k]); // 静音/恢复等路径不经过 render,需在此同步滑块位置
     syncVisual(sites[k]);
     return k;
   }
@@ -218,11 +232,21 @@
     const k = displayKey();
     if (!k) return;
     console.log('[Site Volume] commit ->', k, sites[k]);
+    const wasInList = Array.from(el.siteList.children)
+      .some((node) => node.dataset && node.dataset.site === k);
     // 用共享配额工具写,配额超限时输出醒目错误日志
     (window.saveToStorage || ((key, val) => chrome.storage.sync.set({ [key]: val })))(STORAGE_KEY, sites, 'popup');
     // 记一下"最近调整过"——popup 列表按此排序;失败不影响主流程
     if (window.touchRecent) window.touchRecent(k, 'popup');
-    render();
+    // 内存里的最近列表也同步反映本次调整(供下次 renderSiteList 排序;storage 端以 20 为上限)
+    recents = [k, ...recents.filter((x) => x !== k)].slice(0, 20);
+    if (wasInList) {
+      // 站点已在列表里:只更新它的音量标签,避免整列表重建导致的闪烁
+      updateCurrentSiteInList(k);
+    } else {
+      // 站点第一次被配置:需要让它出现在列表里(并更新头部状态)
+      render();
+    }
   }
 
   // ---- 事件 ----
@@ -260,9 +284,12 @@
     });
   });
 
-  // storage 变更(其他窗口/options 修改)时刷新
+  // storage 变更(其他窗口/options 修改)时刷新。
+  // 自己写入 storage 触发的变更不刷新(否则调一次音量列表会因自己的写入重载而闪),
+  // 仅外部变更才重新加载。
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area !== 'sync') return;
+    if (window.consumeSelfWrite && window.consumeSelfWrite()) return;
     load();
   });
 

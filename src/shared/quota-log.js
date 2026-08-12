@@ -18,6 +18,28 @@
     return /MAX_WRITE_OPERATIONS_PER_MINUTE|MAX_WRITE_OPERATIONS_PER_HOUR/i.test(msg);
   }
 
+  // ---- 自写抑制:避免"自己写 storage → 自己的 onChanged → 重复全量刷新" ----
+  // popup/options 都监听 chrome.storage.onChanged 以便同步外部(其他窗口/页面)的修改;
+  // 但本页面自己 set() 时 onChanged 也会在自己这里触发,若不区分,调节音量时
+  // "最近站点"列表 / 整个管理列表会因自己的写入而多刷新一次(闪一下)。
+  // 方案:每次 set() 前 beginSelfWrite() 计数;onChanged 事件与 set() 一一对应,
+  // 由监听器 consumeSelfWrite() 消费一个计数——计数 >0 说明该变更是本页面自己写的,
+  // 应跳过 reload。写入失败时不会有对应 onChanged,在 catch 里补回计数。
+  const _selfWriteCount = { count: 0 };
+
+  function beginSelfWrite() {
+    _selfWriteCount.count++;
+  }
+
+  /** 消费一个"自写"计数;返回 true 表示这次变更来自本页面,应跳过 reload */
+  function consumeSelfWrite() {
+    if (_selfWriteCount.count > 0) {
+      _selfWriteCount.count--;
+      return true;
+    }
+    return false;
+  }
+
   /**
    * 写入 chrome.storage.sync,并统一处理配额错误日志
    * @param {string} key    存储键(如 'sites')
@@ -25,7 +47,10 @@
    * @param {string} source 调用来源标识(如 'popup' / 'options'),用于日志
    */
   function saveToStorage(key, value, source) {
+    beginSelfWrite();
     return chrome.storage.sync.set({ [key]: value }).catch((err) => {
+      // 写入失败不会触发 onChanged,补回计数(consume 内部有 >0 保护,可安全调用)
+      consumeSelfWrite();
       if (isQuotaError(err)) {
         console.error(
           `%c[Site Volume] ${source}:⚠️ 写入配额超限(storage.sync 限制 120 次/分钟)。` +
@@ -56,8 +81,13 @@
       const data = await chrome.storage.sync.get(RECENTS_KEY);
       const arr = Array.isArray(data[RECENTS_KEY]) ? data[RECENTS_KEY] : [];
       const next = [siteKey, ...arr.filter((k) => k !== siteKey)].slice(0, RECENTS_MAX);
+      // 值没变就不写:既省配额,也避免产生无意义的 onChanged(以及计数配平问题)
+      if (next.join('\u0000') === arr.join('\u0000')) return;
+      beginSelfWrite();
       await chrome.storage.sync.set({ [RECENTS_KEY]: next });
     } catch (err) {
+      // get/set 失败不会有对应 onChanged,补回计数
+      consumeSelfWrite();
       // recents 是辅助数据,失败不应阻塞主流程,也不应吓用户
       console.warn(`[Site Volume] ${source}:更新最近使用失败(可忽略):`, err);
     }
@@ -68,4 +98,6 @@
   window.saveToStorage = saveToStorage;
   window.touchRecent = touchRecent;
   window.RECENTS_KEY = RECENTS_KEY;
+  // 供 popup/options 的 storage.onChanged 监听器判断"这次变更是否自己写的"
+  window.consumeSelfWrite = consumeSelfWrite;
 })();

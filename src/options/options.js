@@ -48,6 +48,19 @@
       : '—';
   }
 
+  // 只更新某一行的 UI(音量标签/滑块填充/静音态),不重建整个列表。
+  // 调整音量后整列表重建会"闪"一下、还丢失滑块焦点;原地更新即可。
+  function updateRowUI(row, slider, volLabel, muteBtn, state, v) {
+    const muted = v === 0;
+    volLabel.textContent = Math.round(v * 100) + '%';
+    slider.value = String(v);
+    slider.style.setProperty('--fill', Math.round(v * 100) + '%');
+    row.classList.toggle('muted-row', muted);
+    state.textContent = muted ? '已静音' : '生效中';
+    muteBtn.className = 'btn mute-toggle' + (muted ? ' active' : '');
+    muteBtn.innerHTML = (muted ? ICON_VOL + '恢复' : ICON_MUTE + '静音');
+  }
+
   function render() {
     const keys = Object.keys(sites).sort();
     emptyEl.hidden = keys.length > 0;
@@ -111,13 +124,7 @@
       slider.addEventListener('input', () => {
         const v = Math.min(1, Math.max(0, parseFloat(slider.value)));
         sites[key] = v;
-        const muted = v === 0;
-        volLabel.textContent = Math.round(v * 100) + '%';
-        slider.style.setProperty('--fill', Math.round(v * 100) + '%');
-        row.classList.toggle('muted-row', muted);
-        state.textContent = muted ? '已静音' : '生效中';
-        muteBtn.className = 'btn mute-toggle' + (muted ? ' active' : '');
-        muteBtn.innerHTML = (muted ? ICON_VOL + '恢复' : ICON_MUTE + '静音');
+        updateRowUI(row, slider, volLabel, muteBtn, state, v);
       });
 
       // 松开鼠标:写一次 storage
@@ -142,7 +149,9 @@
         console.log('[Site Volume] options commit ->', key, sites[key]);
         save();
         if (window.touchRecent) window.touchRecent(key, 'options');
-        render();
+        // 原地更新本行,不整列表重建(避免整体刷新)
+        updateRowUI(row, slider, volLabel, muteBtn, state, sites[key]);
+        renderStats();
       });
 
       del.addEventListener('click', () => {
@@ -272,8 +281,12 @@
   });
   exportBtn.addEventListener('click', exportConfig);
 
+  // storage 变更(其他窗口/页面修改)时刷新。
+  // 自己写入 storage 触发的变更不整体刷新(否则调整音量后整列表会重建一遍),
+  // 仅外部变更才重新加载。
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area !== 'sync') return;
+    if (window.consumeSelfWrite && window.consumeSelfWrite()) return;
     load();
   });
 
