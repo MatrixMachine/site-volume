@@ -107,6 +107,8 @@
       object-fit: cover;
       display: block;
     }
+    /* favicon 加载成功后:去掉紫色渐变底,换中性底色(避免图标叠在紫色上) */
+    .avatar.has-favicon, .mini-avatar.has-favicon { background: var(--card); }
     .site-meta { min-width: 0; flex: 1; }
     .site-name {
       font-weight: 650;

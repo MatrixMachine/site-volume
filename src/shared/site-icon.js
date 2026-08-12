@@ -37,10 +37,18 @@
       if (settled) return;
       settled = true;
       clearTimeout(timer);
+      const holder = img.parentElement;
+      if (holder) holder.classList.remove('has-favicon');
       img.remove();
     }
     img.addEventListener('error', remove);
-    img.addEventListener('load', () => { settled = true; clearTimeout(timer); });
+    img.addEventListener('load', () => {
+      settled = true;
+      clearTimeout(timer);
+      // 图标加载成功后去掉容器紫色渐变底,换中性底色(has-favicon)
+      const holder = img.parentElement;
+      if (holder) holder.classList.add('has-favicon');
+    });
     return img;
   }
 

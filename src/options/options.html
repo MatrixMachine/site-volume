@@ -137,6 +137,8 @@
       object-fit: cover;
       display: block;
     }
+    /* favicon 加载成功后:去掉紫色渐变底,换中性底色(避免图标叠在紫色上) */
+    .avatar.has-favicon { background: var(--card); }
 
     .site-info { width: 170px; flex-shrink: 0; min-width: 0; }
     .site {

@@ -128,6 +128,7 @@
       el.siteBadge.textContent = '无法获取当前站点';
       el.siteAvatar.textContent = '·';
       el.siteAvatar.classList.add('off');
+      el.siteAvatar.classList.remove('has-favicon');
       const oldFav = el.siteAvatar.querySelector('.favicon');
       if (oldFav) oldFav.remove();
     }

@@ -118,6 +118,16 @@ node -e "['src/popup/popup.js','src/options/options.js','src/shared/quota-log.js
 
 `chrome.storage.sync` 限制 **120 次写入/分钟**。滑块拖动期间**只更新内存与 UI,松开鼠标才写入一次**,避免打爆配额;超限时会输出醒目的错误日志(`src/shared/quota-log.js`)。
 
+## 隐私政策
+
+Site Volume 尊重并保护你的隐私。完整的隐私政策见 [`PRIVACY.md`](PRIVACY.md)。
+
+简言之:
+
+- **唯一收集的数据**是你为各站点设定的音量(0–100%),经 `chrome.storage.sync` 存于本地并随你自己的 Google 账号同步;另外会向 Google 图标服务发送站点域名以获取 favicon 图片。
+- **不收集**个人身份信息、浏览历史、音频内容、位置、分析/遥测数据等任何其他数据。
+- **不共享、不出售**数据,无开发者服务器;卸载扩展或删除站点配置即可清除全部数据。
+
 ## License
 
 MIT
