@@ -56,7 +56,8 @@
   function preReadExisting() {
     try {
       document.querySelectorAll('audio, video').forEach((el) => {
-        _preVolumes.set(el, el.volume);
+        // 单个元素读失败不能连累后面的元素,否则会漏记导致后续被错误标记
+        try { _preVolumes.set(el, el.volume); } catch (e) { /* ignore single */ }
       });
     } catch (e) { /* ignore */ }
   }
@@ -93,10 +94,14 @@
     try {
       document.querySelectorAll('audio, video').forEach((el) => {
         if (el[PATCHED]) return;
+        // preReadExisting 可能因异常漏记(如列表中间某个元素抛错)。此时若拿不到原始音量,
+        // 不能只打 PATCHED 标记而不缩放(那会让元素永远 100% 音量)。回退到当前音量:
+        // 此刻 getter 还没给该元素存 stored,返回值即原生音量,照常缩放。
         const orig = _preVolumes.get(el);
-        if (typeof orig === 'number') {
-          setSourceVolume(el, orig);
-          if (_originalSetter) _originalSetter.call(el, effectiveVolume(orig));
+        const src = (typeof orig === 'number') ? orig : el.volume;
+        if (typeof src === 'number') {
+          setSourceVolume(el, src);
+          if (_originalSetter) _originalSetter.call(el, effectiveVolume(src));
         }
         el[PATCHED] = true;
       });
@@ -107,7 +112,10 @@
 
   // 处理单个(新出现的)媒体元素
   function applyToElement(el) {
-    if (!el || el[PATCHED]) return;
+    if (!el) return;
+    // 真正处理过的标志是“已存有源音量”;只打了 PATCHED 标记但没存源音量的
+    // (被初始扫描循环污染的)必须重新接管,否则该元素音量永远不会被缩放。
+    if (el[PATCHED] && typeof getSourceVolume(el) === 'number') return;
     // 此刻 prototype 已被覆写;getter 返回 stored ?? originalGetter
     const current = el.volume;
     if (typeof current === 'number') {
