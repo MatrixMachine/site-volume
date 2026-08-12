@@ -115,13 +115,21 @@
     if (key) {
       el.siteName.textContent = key;
       el.siteBadge.textContent = currentSiteKey ? '' : '未配置,默认 100%';
-      el.siteAvatar.textContent = key.charAt(0).toUpperCase();
+      el.siteAvatar.textContent = key.charAt(0).toUpperCase(); // 兜底:首字母
       el.siteAvatar.classList.remove('off');
+      // 叠上站点 favicon(加载失败自动移除,露出首字母)
+      const oldFav = el.siteAvatar.querySelector('.favicon');
+      if (oldFav) oldFav.remove();
+      if (window.makeFaviconImg) {
+        el.siteAvatar.appendChild(window.makeFaviconImg(key, key.charAt(0).toUpperCase()));
+      }
     } else {
       el.siteName.textContent = '—';
       el.siteBadge.textContent = '无法获取当前站点';
       el.siteAvatar.textContent = '·';
       el.siteAvatar.classList.add('off');
+      const oldFav = el.siteAvatar.querySelector('.favicon');
+      if (oldFav) oldFav.remove();
     }
 
     // 滑块与视觉同步来自内存 volume(单数据源)
@@ -162,7 +170,10 @@
 
       const avatar = document.createElement('span');
       avatar.className = 'mini-avatar';
-      avatar.textContent = key.charAt(0).toUpperCase();
+      avatar.textContent = key.charAt(0).toUpperCase(); // 兜底:首字母
+      if (window.makeFaviconImg) {
+        avatar.appendChild(window.makeFaviconImg(key, key.charAt(0).toUpperCase()));
+      }
 
       const name = document.createElement('span');
       name.className = 'site';

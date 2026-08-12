@@ -78,7 +78,10 @@
 
       const avatar = document.createElement('div');
       avatar.className = 'avatar';
-      avatar.textContent = key.charAt(0).toUpperCase();
+      avatar.textContent = key.charAt(0).toUpperCase(); // 兜底:首字母
+      if (window.makeFaviconImg) {
+        avatar.appendChild(window.makeFaviconImg(key, key.charAt(0).toUpperCase()));
+      }
 
       const info = document.createElement('div');
       info.className = 'site-info';

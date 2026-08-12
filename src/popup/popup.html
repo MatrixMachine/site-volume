@@ -95,8 +95,18 @@
       display: grid; place-items: center;
       flex-shrink: 0;
       user-select: none;
+      position: relative;
+      overflow: hidden;
     }
     .avatar.off { background: var(--track); color: var(--muted); }
+    .avatar .favicon, .mini-avatar .favicon {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
     .site-meta { min-width: 0; flex: 1; }
     .site-name {
       font-weight: 650;
@@ -311,6 +321,8 @@
       display: grid; place-items: center;
       flex-shrink: 0;
       user-select: none;
+      position: relative;
+      overflow: hidden;
     }
     .list-item .site {
       font-weight: 550;
@@ -399,6 +411,7 @@
   <div class="hint rise d3">静音 = 音量 0,拖动滑块即可恢复</div>
 
   <script src="../shared/quota-log.js"></script>
+  <script src="../shared/site-icon.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>

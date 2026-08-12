@@ -92,7 +92,8 @@ Chrome 没有原生 per-site 音量控制,只能调浏览器全局音量。看 B
 | `src/content/bridge.js` | ISOLATED world 桥:读 storage、剥标签匹配、推送 siteFactor |
 | `src/popup/` | 当前站点音量控制弹窗 |
 | `src/options/` | 站点列表管理页 |
-| `src/shared/quota-log.js` | storage.sync 配额超限日志工具 |
+| `src/shared/quota-log.js` | storage.sync 配额超限日志工具(含自写抑制) |
+| `src/shared/site-icon.js` | 站点 favicon 工具(Google s2,失败回退首字母头像) |
 | `tools/gen_icons.py` | 图标生成脚本(Pillow) |
 
 技术决策记录(ADR):
