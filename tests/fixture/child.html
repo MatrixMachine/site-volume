@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="utf-8">
+  <title>child (localhost) — 跨域播放器 frame 模拟</title>
+</head>
+<body>
+  <p>子 frame hostname: <b>localhost</b>(自身不匹配任何已配置站点)</p>
+  <p>打开本 frame 的 Console(顶层 Console 左上角下拉框 → 选择本 frame),查看
+     <code>[Site Volume]</code> 日志:应显示继承自 127.0.0.1 的 factor。</p>
+  <button onclick="mk()">重建 video</button>
+  <script>
+    function mk() {
+      var v = document.createElement('video');
+      v.id = 'v';
+      v.volume = 1; // 设置源音量 = 1,实际输出应为 factor × 1
+      document.body.appendChild(v);
+      console.log('[fixture child] video created, vids=' + document.querySelectorAll('video').length);
+    }
+    mk();
+  </script>
+</body>
+</html>

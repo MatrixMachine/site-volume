@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="utf-8">
+  <title>Site Volume 跨 frame 继承测试 — top (127.0.0.1)</title>
+</head>
+<body>
+  <h1>Site Volume 跨 frame 继承测试</h1>
+  <p>本页 hostname: <b>127.0.0.1</b>(未配置前是"未知站点")</p>
+  <p>步骤:</p>
+  <ol>
+    <li>在扩展 popup 中把 <b>127.0.0.1</b> 设为 <b>30%</b>(或任意非 100% 值)</li>
+    <li>在 <code>http://127.0.0.1:8000/top.html</code> 的 Console 中,用左上角上下文下拉框
+        切到 <code>http://localhost:8000/child.html</code> 和 srcdoc frame</li>
+    <li>查看各自的 <code>[Site Volume]</code> 日志</li>
+  </ol>
+  <p>预期:两个子 frame 的 <code>bridge pushFactor</code> 应显示
+     <code>siteKey=127.0.0.1, factor=0.3</code>(继承自顶层)。</p>
+
+  <h2>1. 跨域 iframe(localhost:8000,与顶层不同 origin)</h2>
+  <iframe src="http://localhost:8000/child.html" width="520" height="120"></iframe>
+
+  <h2>2. srcdoc iframe(hostname 为空)</h2>
+  <iframe srcdoc="&lt;!DOCTYPE html&gt;&lt;html&gt;&lt;body&gt;&lt;p&gt;srcdoc frame(hostname 为空)&lt;/p&gt;&lt;script&gt;var v=document.createElement('video');v.id='v';v.volume=1;document.body.appendChild(v);console.log('[fixture srcdoc] video created, vids='+document.querySelectorAll('video').length);&lt;/script&gt;&lt;/body&gt;&lt;/html&gt;" width="520" height="80"></iframe>
+</body>
+</html>

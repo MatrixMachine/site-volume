@@ -44,7 +44,7 @@
   function matchSite(hostname) {
     if (!hostname) return null;
     const labels = hostname.split('.').filter(Boolean);
-    for (let i = 0; i < labels.length - 1; i++) {
+    for (let i = 0; i < Math.max(1, labels.length - 1); i++) {
       const candidate = labels.slice(i).join('.');
       if (Object.prototype.hasOwnProperty.call(sites, candidate)) {
         return candidate;

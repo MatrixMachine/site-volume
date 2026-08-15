@@ -26,6 +26,10 @@
   - 读 `chrome.storage.sync`,归一化历史 `{volume, muted}` 数据为单值。
   - 剥标签近似匹配 eTLD+1,计算 siteFactor = volume,经 postMessage 推给 MAIN world。
   - 监听 storage 变更实时更新。
+  - **跨 frame 继承**:子 frame 自身 hostname 匹配不到配置时,向父 frame(逐级到顶层)
+    请求并继承其 effective factor(帧间协议:`top-factor` 广播 + `request-factor` 请求)。
+    解决播放器嵌在跨域 iframe / about:blank / srcdoc 中时音量不生效的问题
+    (supjav.com 场景;回归测试见 `tests/fixture/`)。
 - **popup**:当前站点滑块 + 静音按钮(= 设为 0)。
 - **options 页**:站点列表管理(改音量/删除)。
 
